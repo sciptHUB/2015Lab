@@ -1,0 +1,23 @@
+# Expression data from dataset 1 and dataset 2 are normalized across all samples using TDM package.
+# find common genes across two datasets
+shared.genes <- intersect(rownames(df1),rownames(df2))
+
+# Transform data from bead array in df2 to RNA-seq in df1 using training distribution matching (TDM).
+# Cross-platform normalization for microarray and RNA-seq data for machine learning application.
+# DOI: 10.7717/peerj.1621
+
+df2a <- df2[c(which(rownames(df2) %in% shared.genes)),] %>% tibble::rownames_to_column(., var = 'gene')
+df1a <- df1[c(which(rownames(df1) %in% shared.genes)),] %>% tibble::rownames_to_column(., var = 'gene')
+
+# gene column must be 'gene'
+require(TDM)
+set.seed(100)
+df2a.tdm <- TDM::tdm_transform(ref_data = data.table(df1a), target_data = data.table(df2a))
+
+# add annotation
+df2a.tdm <- df2a.tdm %>% reshape2::melt(., id.vars = 'gene', variable.name = 'ID', value.name = 'expr') %>% mutate(dataset = ‘df2’)
+
+df1a <- df1a %>% reshape2::melt(., id.vars = 'gene', variable.name = 'ID', value.name = 'expr') %>% mutate(dataset = ‘df1’)
+
+# merge two dataframes into a combine dataframe
+df.merge <- rbind(df1a,df2a.tdm)
